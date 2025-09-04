@@ -1,6 +1,12 @@
 spring:
   application:
     name: ming-ai-code-backend
+  # mysql
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/ming_ai_code
+    username: root
+    password: 1234
 server:
   port: 8123
   servlet:
