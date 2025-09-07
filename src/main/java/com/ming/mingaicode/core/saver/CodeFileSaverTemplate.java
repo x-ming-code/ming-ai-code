@@ -3,12 +3,14 @@ package com.ming.mingaicode.core.saver;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
+import com.ming.mingaicode.constant.AppConstant;
 import com.ming.mingaicode.exceptioon.BusinessException;
 import com.ming.mingaicode.exceptioon.ErrorCode;
 import com.ming.mingaicode.model.enums.CodeGenTypeEnum;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
+
 
 /**
  * @author ming
@@ -17,7 +19,7 @@ import java.nio.charset.StandardCharsets;
  */
 
 public abstract class CodeFileSaverTemplate<T> {
-    public static final String FILE_SAVE_ROOT_DIR = System.getProperty("user.dir") + "/tmp/code_output";
+    public static final String FILE_SAVE_ROOT_DIR = AppConstant.CODE_OUTPUT_ROOT_DIR;
 
     /**
      * 模板方法：保存代码的标准流程
@@ -25,12 +27,12 @@ public abstract class CodeFileSaverTemplate<T> {
      * @param result 代码结果对象
      * @return 保存的目录
      */
-    public final File saveCode(T result) {
+    public final File saveCode(T result,Long appId) {
         //校验参数
         validateInput(result);
 
         //构建唯一目录
-        String baseDirPath = buildUniqueDir();
+        String baseDirPath = buildUniqueDir(appId);
         //保存文件，由子类实现
         saveFiles(result, baseDirPath);
         //返回文件对象
@@ -63,9 +65,12 @@ public abstract class CodeFileSaverTemplate<T> {
     /**
      * 构建唯一目录路径 tmp/code_output/业务类型_雪花id 拼接成完整的路径
      */
-    protected final String buildUniqueDir() {
+    protected final String buildUniqueDir(Long appId) {
+        if (appId == null){
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "appId不能为空");
+        }
         String codeType = getCodeType().getValue();
-        String uniqeDirName = StrUtil.format("{}_{}", codeType, IdUtil.getSnowflakeNextIdStr());
+        String uniqeDirName = StrUtil.format("{}_{}", codeType, appId);
         String dirPath = FILE_SAVE_ROOT_DIR + File.separator + uniqeDirName;
         return dirPath;
     }

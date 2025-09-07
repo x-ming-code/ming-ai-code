@@ -2,9 +2,11 @@ package com.ming.mingaicode.service;
 
 import com.ming.mingaicode.model.dto.app.AppQueryRequest;
 import com.ming.mingaicode.model.dto.app.AppVO;
+import com.ming.mingaicode.model.entity.User;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.core.service.IService;
 import com.ming.mingaicode.model.entity.App;
+import reactor.core.publisher.Flux;
 
 import java.util.List;
 
@@ -21,4 +23,10 @@ public interface AppService extends IService<App> {
     QueryWrapper getQueryWrapper(AppQueryRequest appQueryRequest);
 
     List<AppVO> getAppVOList(List<App> appList);
+
+    //应用聊天生成代码（流式 SSE）
+    Flux<String> chatToGenCode(Long appId, String message, User loginUser);
+
+    //应用部署
+     String deployApp(Long appId, User loginUser);
 }
