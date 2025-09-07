@@ -14,11 +14,13 @@ const originItems = [
     key: '/',
     label: '主页',
     title: '主页',
+    path: '/',
   },
   {
-    key: '/admin/userManage',
+    key: '/admin/UserManagePage',
     label: '用户管理',
     title: '用户管理',
+    path: '/admin/UserManagePage',
   }
 ]
 
