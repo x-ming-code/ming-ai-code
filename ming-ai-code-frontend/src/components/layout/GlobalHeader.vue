@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
-import { RouterLink, useRoute, useRouter } from 'vue-router';
-import {useLoginUserStore} from "@/stores/LoginUser.ts";
-import { LogoutOutlined, UserOutlined, LockOutlined } from '@ant-design/icons-vue';
-import {MenuProps, message} from 'ant-design-vue';
-import { userLogout } from '@/api/userController.ts';
+import { ref, computed, watch } from 'vue'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { useLoginUserStore } from '@/stores/LoginUser.ts'
+import { LogoutOutlined, UserOutlined, LockOutlined } from '@ant-design/icons-vue'
+import { MenuProps, message } from 'ant-design-vue'
+import { userLogout } from '@/api/userController.ts'
 // 获取当前路由
-const route = useRoute();
+const route = useRoute()
 
 // 菜单配置项
 const originItems = [
@@ -21,9 +21,14 @@ const originItems = [
     label: '用户管理',
     title: '用户管理',
     path: '/admin/UserManagePage',
-  }
+  },
+  {
+    key: '/admin/AppManagePage',
+    label: '应用管理',
+    title: '应用管理',
+    path: '/admin/AppManagePage',
+  },
 ]
-
 
 // 过滤菜单项
 const filterMenus = (menus = [] as MenuProps['items']) => {
@@ -45,22 +50,22 @@ const menuItems = computed<MenuProps['items']>(() => filterMenus(originItems))
 const loginUserStore = useLoginUserStore()
 // 根据当前路径获取对应的菜单key
 const getMenuKeyByPath = (path: string) => {
-  const item = menuItems.value.find(item => item.path === path);
-  return item ? item.key : 'home';
-};
+  const item = menuItems.value.find((item) => item.path === path)
+  return item ? item.key : 'home'
+}
 
 // 当前选中的菜单项
-const selectedKeys = ref([getMenuKeyByPath(route.path)]);
+const selectedKeys = ref([getMenuKeyByPath(route.path)])
 
 // 监听路由变化，更新选中的菜单项
 watch(
   () => route.path,
   (newPath) => {
-    selectedKeys.value = [getMenuKeyByPath(newPath)];
-  }
-);
+    selectedKeys.value = [getMenuKeyByPath(newPath)]
+  },
+)
 
-const router = useRouter();
+const router = useRouter()
 
 // 用户注销
 const doLogout = async () => {

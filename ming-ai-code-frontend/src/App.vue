@@ -7,9 +7,7 @@ import { useLoginUserStore } from "@/stores/LoginUser.ts";
 const loginUserStore = useLoginUserStore();
 loginUserStore.fetchLoginUser();
 
-health().then((res) => {
-  console.log(res)
-})
+
 
 </script>
 
@@ -19,10 +17,22 @@ health().then((res) => {
 
 <style>
 /* 全局样式 */
-html, body {
+* {
+  box-sizing: border-box;
+}
+
+body {
   margin: 0;
   padding: 0;
-  height: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell',
+    'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+html {
+  overflow-x: hidden;
 }
 </style>
