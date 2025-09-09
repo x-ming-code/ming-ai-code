@@ -13,8 +13,10 @@ import com.ming.mingaicode.exceptioon.ThrowUtils;
 import com.ming.mingaicode.model.dto.app.AppQueryRequest;
 import com.ming.mingaicode.model.dto.app.AppVO;
 import com.ming.mingaicode.model.entity.User;
+import com.ming.mingaicode.model.enums.ChatHistoryMessageTypeEnum;
 import com.ming.mingaicode.model.enums.CodeGenTypeEnum;
 import com.ming.mingaicode.model.vo.UserVO;
+import com.ming.mingaicode.service.ChatHistoryService;
 import com.ming.mingaicode.service.UserService;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
@@ -22,10 +24,12 @@ import com.ming.mingaicode.model.entity.App;
 import com.ming.mingaicode.mapper.AppMapper;
 import com.ming.mingaicode.service.AppService;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
 import java.io.File;
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,10 +43,18 @@ import java.util.stream.Collectors;
  * @author <a href="https://ming-code.work/">ming</a>
  */
 @Service
+@Slf4j
 public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppService {
 
     @Resource
+    private UserService userService;
+
+    @Resource
     private AiCodeGeneratorFacade aiCodeGeneratorFacade;
+
+    @Resource
+    private ChatHistoryService chatHistoryService;
+
 
     /**
      * 应用聊天生成代码（流式 SSE）
@@ -70,8 +82,28 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         if (enumByValue == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "应用代码生成类型错误");
         }
-        // 5. 调用 AI 生成代码
-        return aiCodeGeneratorFacade.generateAndSaveCodeStreamT(message, enumByValue, appId);
+        //通过校验后，将用户消息添加到对话历史中
+        chatHistoryService.addChatHistory(appId, loginUser.getId(), message, ChatHistoryMessageTypeEnum.USER.getValue());
+        // 5. 调用 AI 生成代码(流式)
+        Flux<String> stringFlux = aiCodeGeneratorFacade.generateAndSaveCodeStreamT(message, enumByValue, appId);
+        StringBuilder stringBuilder = new StringBuilder();
+        return stringFlux
+                .map(chunk -> {
+                    stringBuilder.append(chunk);
+                    return chunk;
+                }).doOnComplete(() -> {
+                    //流式响应完成后，添加AI消息到对话历史
+                    String aiResponse = stringBuilder.toString();
+                    if (StrUtil.isNotBlank(aiResponse)) {
+                        chatHistoryService.addChatHistory(appId, loginUser.getId(), aiResponse, ChatHistoryMessageTypeEnum.AI.getValue());
+                    }
+                }).doOnError(error -> {
+                    // 如果AI回复失败，也要记录错误消息
+                    String errorMessage = "AI回复失败: " + error.getMessage();
+                    chatHistoryService.addChatHistory(appId, loginUser.getId(), errorMessage, ChatHistoryMessageTypeEnum.AI.getValue());
+
+                });
+
 
     }
 
@@ -126,8 +158,6 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         return String.format("%s/%s", AppConstant.CODE_DEPLOY_HOST, deployKey);
     }
 
-    @Resource
-    private UserService userService;
 
     // 关联查询用户信息
     @Override
@@ -163,16 +193,7 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         Long userId = appQueryRequest.getUserId();
         String sortField = appQueryRequest.getSortField();
         String sortOrder = appQueryRequest.getSortOrder();
-        return QueryWrapper.create()
-                .eq("id", id)
-                .like("appName", appName)
-                .like("cover", cover)
-                .like("initPrompt", initPrompt)
-                .eq("codeGenType", codeGenType)
-                .eq("deployKey", deployKey)
-                .eq("priority", priority)
-                .eq("userId", userId)
-                .orderBy(sortField, "ascend".equals(sortOrder));
+        return QueryWrapper.create().eq("id", id).like("appName", appName).like("cover", cover).like("initPrompt", initPrompt).eq("codeGenType", codeGenType).eq("deployKey", deployKey).eq("priority", priority).eq("userId", userId).orderBy(sortField, "ascend".equals(sortOrder));
     }
 
     //分页查询用户创建的应用信息
@@ -182,17 +203,12 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
             return new ArrayList<>();
         }
         // 批量获取用户信息，避免 N+1 查询问题
-        Set<Long> userIds = appList.stream()
-                .map(app -> {
-                    return app.getUserId();
-                }).collect(Collectors.toSet());
+        Set<Long> userIds = appList.stream().map(app -> {
+            return app.getUserId();
+        }).collect(Collectors.toSet());
         List<User> users = userService.listByIds(userIds);
         //将用户id作为键 UserVO 对象为值的 Map
-        Map<Long, UserVO> userVOMap = users.stream()
-                .collect(Collectors.toMap(
-                        user -> user.getId(),
-                        user -> userService.getUserVO(user)
-                ));
+        Map<Long, UserVO> userVOMap = users.stream().collect(Collectors.toMap(user -> user.getId(), user -> userService.getUserVO(user)));
 //        Map<Long, UserVO> userVOMap = userService.listByIds(userIds).stream()
 //                .collect(Collectors.toMap(User::getId, userService::getUserVO));
         //将一个 App 对象列表，转换为带有用户信息的 AppVO 对象列表。
@@ -204,5 +220,29 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         }).collect(Collectors.toList());
     }
 
+    /**
+     * 删除应用时关联删除对话历史
+     *
+     * @param id 应用ID
+     * @return 是否成功
+     */
+    @Override
+    public boolean removeById(Serializable id) {
+        if (id == null) {
+            return false;
+        }
+        Long appId = Long.valueOf(id.toString());
+        if (appId <= 0) {
+            return false;
+        }
+        // 先删除关联的对话历史
+        try {
+            chatHistoryService.deleteByAppId(appId);
+        } catch (Exception e) {
+            // 记录日志但不阻止应用删除
+            log.error("删除应用关联对话历史失败: {}", e.getMessage());
+        }
+        return super.removeById(id);
+    }
 
 }
