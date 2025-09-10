@@ -277,17 +277,22 @@ onMounted(() => {
 
 <style scoped>
 #homePage {
-  width: 100%;
+  width: 100vw;
+  height: 100vh;
   margin: 0;
   padding: 0;
   min-height: 100vh;
   background:
-    linear-gradient(180deg, #f8fafc 0%, #f1f5f9 8%, #e2e8f0 20%, #cbd5e1 100%),
+    url('/background-Ka9zUI9d.png') center center/cover no-repeat fixed,
+    linear-gradient(180deg, rgba(248, 250, 252, 0.9) 0%, rgba(241, 245, 249, 0.85) 8%, rgba(226, 232, 240, 0.8) 20%, rgba(203, 213, 225, 0.75) 100%),
     radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
     radial-gradient(circle at 80% 20%, rgba(139, 92, 246, 0.12) 0%, transparent 50%),
     radial-gradient(circle at 40% 40%, rgba(16, 185, 129, 0.08) 0%, transparent 50%);
   position: relative;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background-attachment: fixed;
+  background-blend-mode: overlay;
 }
 
 /* 科技感网格背景 */
@@ -299,17 +304,18 @@ onMounted(() => {
   right: 0;
   bottom: 0;
   background-image:
-    linear-gradient(rgba(59, 130, 246, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(59, 130, 246, 0.05) 1px, transparent 1px),
-    linear-gradient(rgba(139, 92, 246, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(139, 92, 246, 0.04) 1px, transparent 1px);
+    linear-gradient(rgba(59, 130, 246, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59, 130, 246, 0.08) 1px, transparent 1px),
+    linear-gradient(rgba(139, 92, 246, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(139, 92, 246, 0.06) 1px, transparent 1px);
   background-size:
-    100px 100px,
-    100px 100px,
-    20px 20px,
-    20px 20px;
+    120px 120px,
+    120px 120px,
+    24px 24px,
+    24px 24px;
   pointer-events: none;
-  animation: gridFloat 20s ease-in-out infinite;
+  animation: gridFloat 25s ease-in-out infinite;
+  opacity: 0.8;
 }
 
 /* 动态光效 */
@@ -322,40 +328,53 @@ onMounted(() => {
   bottom: 0;
   background:
     radial-gradient(
-      600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
-      rgba(59, 130, 246, 0.08) 0%,
-      rgba(139, 92, 246, 0.06) 40%,
+      800px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+      rgba(59, 130, 246, 0.12) 0%,
+      rgba(139, 92, 246, 0.1) 30%,
+      rgba(16, 185, 129, 0.08) 60%,
       transparent 80%
     ),
-    linear-gradient(45deg, transparent 30%, rgba(59, 130, 246, 0.04) 50%, transparent 70%),
-    linear-gradient(-45deg, transparent 30%, rgba(139, 92, 246, 0.04) 50%, transparent 70%);
+    linear-gradient(45deg, transparent 30%, rgba(59, 130, 246, 0.06) 50%, transparent 70%),
+    linear-gradient(-45deg, transparent 30%, rgba(139, 92, 246, 0.06) 50%, transparent 70%);
   pointer-events: none;
-  animation: lightPulse 8s ease-in-out infinite alternate;
+  animation: lightPulse 10s ease-in-out infinite alternate;
+  backdrop-filter: blur(2px);
 }
 
 @keyframes gridFloat {
-  0%,
-  100% {
+  0% {
     transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(5px, 0);
   }
   50% {
     transform: translate(5px, 5px);
+  }
+  75% {
+    transform: translate(0, 5px);
+  }
+  100% {
+    transform: translate(0, 0);
   }
 }
 
 @keyframes lightPulse {
   0% {
-    opacity: 0.3;
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.8;
   }
   100% {
-    opacity: 0.7;
+    opacity: 0.6;
   }
 }
 
 .container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
+  max-width: 100%;
+  margin: 0;
+  padding: 40px;
   position: relative;
   z-index: 2;
   width: 100%;
@@ -367,11 +386,12 @@ onMounted(() => {
 /* 英雄区域 */
 .hero-section {
   text-align: center;
-  padding: 80px 0 60px;
-  margin-bottom: 28px;
+  padding: 100px 0 80px;
+  margin-bottom: 40px;
   color: #1e293b;
   position: relative;
   overflow: hidden;
+  width: 100%;
 }
 
 .hero-section::before {

@@ -85,7 +85,7 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         //通过校验后，将用户消息添加到对话历史中
         chatHistoryService.addChatHistory(appId, loginUser.getId(), message, ChatHistoryMessageTypeEnum.USER.getValue());
         // 5. 调用 AI 生成代码(流式)
-        Flux<String> stringFlux = aiCodeGeneratorFacade.generateAndSaveCodeStreamT(message, enumByValue, appId);
+        Flux<String> stringFlux = aiCodeGeneratorFacade.generateAndSaveCodeStream(message, enumByValue, appId);
         StringBuilder stringBuilder = new StringBuilder();
         return stringFlux
                 .map(chunk -> {
