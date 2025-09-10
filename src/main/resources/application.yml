@@ -1,6 +1,10 @@
 spring:
   application:
     name: ming-ai-code-backend
+  session:
+    store-type: redis
+    # session 30 天过期
+    timeout: 2592000
   # mysql
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -13,6 +17,10 @@ server:
   port: 8123
   servlet:
     context-path: /api
+    # cookie 30 天过期
+    session:
+      cookie:
+        max-age: 2592000
 
 # springdoc-openapi
 springdoc:

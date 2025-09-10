@@ -91,7 +91,11 @@
             <artifactId>caffeine</artifactId>
         </dependency>
 
-
+        <!-- Spring Session + Redis -->
+        <dependency>
+            <groupId>org.springframework.session</groupId>
+            <artifactId>spring-session-data-redis</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>dev.langchain4j</groupId>
