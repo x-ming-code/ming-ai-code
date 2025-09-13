@@ -1,15 +1,22 @@
 package com.ming.mingaicode.core;
 
 
+import cn.hutool.json.JSONUtil;
 import com.ming.mingaicode.ai.AiCodeGeneratorService;
 import com.ming.mingaicode.ai.AiCodeGeneratorServiceFactory;
 import com.ming.mingaicode.ai.model.HtmlCodeResult;
 import com.ming.mingaicode.ai.model.MultiFileCodeResult;
+import com.ming.mingaicode.ai.model.message.AiResponseMessage;
+import com.ming.mingaicode.ai.model.message.ToolExecutedMessage;
+import com.ming.mingaicode.ai.model.message.ToolRequestMessage;
 import com.ming.mingaicode.core.parser.CodeParserExecutor;
 import com.ming.mingaicode.core.saver.CodeFileSaverExecutor;
 import com.ming.mingaicode.exceptioon.BusinessException;
 import com.ming.mingaicode.exceptioon.ErrorCode;
 import com.ming.mingaicode.model.enums.CodeGenTypeEnum;
+import dev.langchain4j.model.chat.response.ChatResponse;
+import dev.langchain4j.service.TokenStream;
+import dev.langchain4j.service.tool.ToolExecution;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -81,8 +88,9 @@ public class AiCodeGeneratorFacade {
                 yield processCodeStream(codeStream, CodeGenTypeEnum.MULTI_FILE, appId);
             }
             case VUE_PROJECT -> {
-                Flux<String> codeStream = aiCodeGeneratorService.generateVueProjectCodeStream(appId, userMessage);
-                yield processCodeStream(codeStream, CodeGenTypeEnum.MULTI_FILE, appId);
+                TokenStream tokenStream = aiCodeGeneratorService.generateVueProjectCodeStream(appId, userMessage);
+                // 处理TokenStream，将TokenStream处理成流式响应
+                yield processTokenStream(tokenStream);
             }
             default -> {
                 String errorMessage = "不支持的生成类型：" + codeGenTypeEnum.getValue();
@@ -90,6 +98,45 @@ public class AiCodeGeneratorFacade {
             }
         };
     }
+
+    /**
+     * 将 TokenStream 转换为 Flux<String>，并传递工具调用信息
+     *
+     * @param tokenStream TokenStream 对象
+     * @return Flux<String> 流式响应
+     */
+    private Flux<String> processTokenStream(TokenStream tokenStream) {
+        // 创建 Flux并设置一些值
+        return Flux.create(sink -> {
+            //AI 模型返回一个部分文本响应时，触发此回调。封装成 AiResponseMessage 并转为 JSON 发送。
+            tokenStream.onPartialResponse((String partialResponse) -> {
+                        AiResponseMessage aiResponseMessage = new AiResponseMessage(partialResponse);
+                        sink.next(JSONUtil.toJsonStr(aiResponseMessage));
+                    })
+                    //当 AI 模型决定调用某个工具（Function Call）时，触发此回调。发送工具调用请求消息。
+                    .onPartialToolExecutionRequest((index, toolExecutionRequest) -> {
+                        ToolRequestMessage toolRequestMessage = new ToolRequestMessage(toolExecutionRequest);
+                        sink.next(JSONUtil.toJsonStr(toolRequestMessage));
+                    })
+                    //当 AI 模型调用某个工具（Function Call）时，触发此回调。发送工具执行完成消息。
+                    .onToolExecuted((ToolExecution toolExecution) -> {
+                        ToolExecutedMessage toolExecutedMessage = new ToolExecutedMessage(toolExecution);
+                        sink.next(JSONUtil.toJsonStr(toolExecutedMessage));
+                    })
+                    //整个 AI 响应完成，调用 sink.complete()，表示流正常结束。
+                    .onCompleteResponse((ChatResponse response) -> {
+                        sink.complete();
+                    })
+                    //出现异常时，打印堆栈并通知流发生错误，终止流。
+                    .onError((Throwable error) -> {
+                        error.printStackTrace();
+                        sink.error(error);
+                    })
+                    //启动这个 TokenStream 的流式监听。
+                    .start();
+        });
+    }
+
 
     /**
      * 通用流式代码处理方法

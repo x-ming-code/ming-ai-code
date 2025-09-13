@@ -7,6 +7,7 @@ import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import com.ming.mingaicode.constant.AppConstant;
 import com.ming.mingaicode.core.AiCodeGeneratorFacade;
+import com.ming.mingaicode.core.handler.StreamHandlerExecutor;
 import com.ming.mingaicode.exceptioon.BusinessException;
 import com.ming.mingaicode.exceptioon.ErrorCode;
 import com.ming.mingaicode.exceptioon.ThrowUtils;
@@ -55,6 +56,10 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
     @Resource
     private ChatHistoryService chatHistoryService;
 
+    // 根据类型决定处理不通的代码流
+    @Resource
+    private StreamHandlerExecutor streamHandlerExecutor;
+
 
     /**
      * 应用聊天生成代码（流式 SSE）
@@ -87,22 +92,7 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         // 5. 调用 AI 生成代码(流式)
         Flux<String> stringFlux = aiCodeGeneratorFacade.generateAndSaveCodeStream(message, enumByValue, appId);
         StringBuilder stringBuilder = new StringBuilder();
-        return stringFlux
-                .map(chunk -> {
-                    stringBuilder.append(chunk);
-                    return chunk;
-                }).doOnComplete(() -> {
-                    //流式响应完成后，添加AI消息到对话历史
-                    String aiResponse = stringBuilder.toString();
-                    if (StrUtil.isNotBlank(aiResponse)) {
-                        chatHistoryService.addChatHistory(appId, loginUser.getId(), aiResponse, ChatHistoryMessageTypeEnum.AI.getValue());
-                    }
-                }).doOnError(error -> {
-                    // 如果AI回复失败，也要记录错误消息
-                    String errorMessage = "AI回复失败: " + error.getMessage();
-                    chatHistoryService.addChatHistory(appId, loginUser.getId(), errorMessage, ChatHistoryMessageTypeEnum.AI.getValue());
-
-                });
+        return streamHandlerExecutor.doExecute(stringFlux, chatHistoryService, appId, loginUser, enumByValue);
 
 
     }
