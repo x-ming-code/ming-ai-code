@@ -154,6 +154,7 @@ const goToChangePassword = () => {
   align-items: center;
   padding: 0 24px;
   background-color: white;
+  width: 100%;
 }
 
 .logo-container {

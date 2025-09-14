@@ -30,9 +30,18 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  width: 100vw;
+  min-height: 100vh;
 }
 
 html {
   overflow-x: hidden;
+  width: 100%;
+  height: 100%;
+}
+
+#app {
+  width: 100%;
+  min-height: 100vh;
 }
 </style>

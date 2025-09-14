@@ -22,27 +22,29 @@ import GlobalFooter from '@/components/layout/GlobalFooter.vue';
 }
 
 .content {
-  padding: 0 50px;
+  padding: 0;
   display: flex;
   flex-direction: column;
+  width: 100%;
 }
 
 .content-container {
   background: #fff;
-  padding: 24px;
+  padding: 0;
   min-height: 280px;
-  margin: 24px 0;
+  margin: 0;
   flex: 1;
+  width: 100%;
 }
 
 @media (max-width: 768px) {
   .content {
-    padding: 0 20px;
+    padding: 0;
   }
   
   .content-container {
-    padding: 16px;
-    margin: 16px 0;
+    padding: 0;
+    margin: 0;
   }
 }
 </style>
