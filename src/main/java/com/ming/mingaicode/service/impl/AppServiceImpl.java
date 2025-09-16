@@ -19,6 +19,7 @@ import com.ming.mingaicode.model.enums.ChatHistoryMessageTypeEnum;
 import com.ming.mingaicode.model.enums.CodeGenTypeEnum;
 import com.ming.mingaicode.model.vo.UserVO;
 import com.ming.mingaicode.service.ChatHistoryService;
+import com.ming.mingaicode.service.ScreenshotService;
 import com.ming.mingaicode.service.UserService;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
@@ -33,10 +34,7 @@ import reactor.core.publisher.Flux;
 import java.io.File;
 import java.io.Serializable;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -63,6 +61,9 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
 
     @Resource
     private VueProjectBuilder vueProjectBuilder;
+
+    @Resource
+    private ScreenshotService screenshotService;
 
 
     /**
@@ -95,12 +96,18 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         chatHistoryService.addChatHistory(appId, loginUser.getId(), message, ChatHistoryMessageTypeEnum.USER.getValue());
         // 5. 调用 AI 生成代码(流式)
         Flux<String> stringFlux = aiCodeGeneratorFacade.generateAndSaveCodeStream(message, enumByValue, appId);
-        StringBuilder stringBuilder = new StringBuilder();
         return streamHandlerExecutor.doExecute(stringFlux, chatHistoryService, appId, loginUser, enumByValue);
 
 
     }
 
+    /**
+     * 应用部署
+     *
+     * @param appId     应用 ID
+     * @param loginUser 登录用户
+     * @return 部署成功后可访问的网址
+     */
     //应用部署
     public String deployApp(Long appId, User loginUser) {
         //1.校验参数
@@ -135,7 +142,7 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         }
         //先判断要生成的类型
         CodeGenTypeEnum codeGenTypeEnum = CodeGenTypeEnum.getEnumByValue(codeGenType);
-        if (codeGenTypeEnum == CodeGenTypeEnum.VUE_PROJECT){
+        if (codeGenTypeEnum == CodeGenTypeEnum.VUE_PROJECT) {
             // Vue 项目需要构建
             boolean buildSuccess = vueProjectBuilder.buildProject(sourceDir);
             ThrowUtils.throwIf(!buildSuccess, ErrorCode.SYSTEM_ERROR, "Vue 项目构建失败，请检查代码和依赖");
@@ -162,7 +169,36 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         boolean res = this.updateById(updateApp);
         ThrowUtils.throwIf(!res, ErrorCode.OPERATION_ERROR, "更新应用部署信息失败");
 
-        return String.format("%s/%s", AppConstant.CODE_DEPLOY_HOST, deployKey);
+        //10. 部署成功后使用截图服务进行截图和插入数据库
+        String appDeployUrl = String.format("%s/%s", AppConstant.CODE_DEPLOY_HOST, deployKey);
+        //异步生成截图并插入数据库
+        generateAppScreenshotAsync(appId, appDeployUrl);
+        return appDeployUrl;
+    }
+
+    /**
+     * 异步生成应用截图并更新封面
+     *
+     * @param appId        应用ID
+     * @param appDeployUrl 应用访问URL
+     */
+    @Override
+    public void generateAppScreenshotAsync(Long appId, String appDeployUrl) {
+        // 异步生成截图并插入数据库
+        Thread.ofVirtual().start(() -> {
+            try {
+                // 调用截图服务生成截图并上传
+                String screenshotUrl = screenshotService.generateAndUploadScreenshot(appDeployUrl);
+                // 更新应用封面字段
+                App updateApp = new App();
+                updateApp.setId(appId);
+                updateApp.setCover(screenshotUrl);
+                boolean res = this.updateById(updateApp);
+                ThrowUtils.throwIf(!res, ErrorCode.OPERATION_ERROR, "更新应用封面字段失败");
+            } catch (Exception e) {
+                log.info("异步生成截图并插入数据库失败：" + e.getMessage());
+            }
+        });
     }
 
 
