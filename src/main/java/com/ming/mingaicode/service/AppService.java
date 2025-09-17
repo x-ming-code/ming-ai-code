@@ -1,5 +1,6 @@
 package com.ming.mingaicode.service;
 
+import com.ming.mingaicode.model.dto.app.AppAddRequest;
 import com.ming.mingaicode.model.dto.app.AppQueryRequest;
 import com.ming.mingaicode.model.dto.app.AppVO;
 import com.ming.mingaicode.model.entity.User;
@@ -27,6 +28,8 @@ public interface AppService extends IService<App> {
 
     //应用聊天生成代码（流式 SSE）
     Flux<String> chatToGenCode(Long appId, String message, User loginUser);
+
+    Long createApp(AppAddRequest appAddRequest, User loginUser);
 
     /**
      * 应用部署
