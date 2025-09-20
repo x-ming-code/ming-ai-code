@@ -33,3 +33,11 @@ knife4j:
   setting:
     language: zh_cn
 
+# Pexels 图片搜索配置
+pexels:
+  api-key: <Your API Key>
+
+# 阿里云 DashScope 配置
+dashscope:
+  api-key: <Your API Key>
+  image-model: <Your Model>
