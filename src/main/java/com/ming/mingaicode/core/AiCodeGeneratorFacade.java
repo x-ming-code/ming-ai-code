@@ -9,6 +9,8 @@ import com.ming.mingaicode.ai.model.MultiFileCodeResult;
 import com.ming.mingaicode.ai.model.message.AiResponseMessage;
 import com.ming.mingaicode.ai.model.message.ToolExecutedMessage;
 import com.ming.mingaicode.ai.model.message.ToolRequestMessage;
+import com.ming.mingaicode.constant.AppConstant;
+import com.ming.mingaicode.core.builder.VueProjectBuilder;
 import com.ming.mingaicode.core.parser.CodeParserExecutor;
 import com.ming.mingaicode.core.saver.CodeFileSaverExecutor;
 import com.ming.mingaicode.exceptioon.BusinessException;
@@ -33,6 +35,9 @@ public class AiCodeGeneratorFacade {
 
     @Resource
     private AiCodeGeneratorServiceFactory aiCodeGeneratorServiceFactory;
+
+    @Resource
+    private VueProjectBuilder vueProjectBuilder;
 
     /**
      * 统一入口：根据类型生成并保存代码
@@ -90,7 +95,7 @@ public class AiCodeGeneratorFacade {
             case VUE_PROJECT -> {
                 TokenStream tokenStream = aiCodeGeneratorService.generateVueProjectCodeStream(appId, userMessage);
                 // 处理TokenStream，将TokenStream处理成流式响应
-                yield processTokenStream(tokenStream);
+                yield processTokenStream(tokenStream, appId);
             }
             default -> {
                 String errorMessage = "不支持的生成类型：" + codeGenTypeEnum.getValue();
@@ -105,7 +110,7 @@ public class AiCodeGeneratorFacade {
      * @param tokenStream TokenStream 对象
      * @return Flux<String> 流式响应
      */
-    private Flux<String> processTokenStream(TokenStream tokenStream) {
+    private Flux<String> processTokenStream(TokenStream tokenStream, Long appId) {
         // 创建 Flux并设置一些值
         return Flux.create(sink -> {
             //AI 模型返回一个部分文本响应时，触发此回调。封装成 AiResponseMessage 并转为 JSON 发送。
@@ -125,6 +130,9 @@ public class AiCodeGeneratorFacade {
                     })
                     //整个 AI 响应完成，调用 sink.complete()，表示流正常结束。
                     .onCompleteResponse((ChatResponse response) -> {
+                        // 执行 Vue 项目构建（同步执行，确保预览时项目已就绪）
+                        String projectPath = AppConstant.CODE_OUTPUT_ROOT_DIR + File.separator + "vue_project_" + appId;
+                        vueProjectBuilder.buildProject(projectPath);
                         sink.complete();
                     })
                     //出现异常时，打印堆栈并通知流发生错误，终止流。
