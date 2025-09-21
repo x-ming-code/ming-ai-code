@@ -2,6 +2,7 @@ package com.ming.mingaicode.common;
 
 import com.ming.mingaicode.exceptioon.ErrorCode;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 
