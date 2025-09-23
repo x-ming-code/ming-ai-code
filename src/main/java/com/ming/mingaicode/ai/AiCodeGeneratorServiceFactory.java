@@ -3,6 +3,7 @@ package com.ming.mingaicode.ai;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.ming.mingaicode.ai.guardrail.PromptSafetyInputGuardrail;
+import com.ming.mingaicode.ai.guardrail.RetryOutputGuardrail;
 import com.ming.mingaicode.ai.tools.*;
 import com.ming.mingaicode.exceptioon.BusinessException;
 import com.ming.mingaicode.exceptioon.ErrorCode;
@@ -107,22 +108,26 @@ public class AiCodeGeneratorServiceFactory {
                         .chatModel(chatModel)
                         .streamingChatModel(reasoningStreamingChatModel)
                         .chatMemoryProvider(memoryId -> chatMemory)
+                        .maxSequentialToolsInvocations(20)  // 最多连续调用 20 次工具
                         .tools(toolManager.getAllTools())
                         .hallucinatedToolNameStrategy(toolExecutionRequest -> ToolExecutionResultMessage.from(
                                 toolExecutionRequest, "Error: there is no tool called " + toolExecutionRequest.name()
                         ))
                         .inputGuardrails(new PromptSafetyInputGuardrail())  // 添加输入护轨
+                        // .outputGuardrails(new RetryOutputGuardrail()) // 添加输出护轨,为了可能会导致不会流式输出，暂不使用
                         .build();
             }
             // HTML 和多文件生成使用默认模型
             case HTML, MULTI_FILE -> {
                 // 使用多例模式的 StreamingChatModel 解决并发问题
                 StreamingChatModel openAiStreamingChatModel = SpringContextUtil.getBean("streamingChatModelPrototype", StreamingChatModel.class);
-               yield  AiServices.builder(AiCodeGeneratorService.class)
+                yield AiServices.builder(AiCodeGeneratorService.class)
                         .chatModel(chatModel)
                         .streamingChatModel(openAiStreamingChatModel)
+                        .maxSequentialToolsInvocations(10)  // 最多连续调用 10 次工具
                         .chatMemory(chatMemory)
-                       .inputGuardrails(new PromptSafetyInputGuardrail())  // 添加输入护轨
+                        .inputGuardrails(new PromptSafetyInputGuardrail())  // 添加输入护轨
+                        //  .outputGuardrails(new RetryOutputGuardrail()) // 添加输出护轨,为了可能会导致不会流式输出，暂不使用
                         .build();
             }
             default -> throw new BusinessException(ErrorCode.SYSTEM_ERROR,
