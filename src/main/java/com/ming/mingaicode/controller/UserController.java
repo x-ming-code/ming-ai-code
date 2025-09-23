@@ -12,6 +12,8 @@ import com.ming.mingaicode.exceptioon.ThrowUtils;
 import com.ming.mingaicode.model.dto.user.*;
 import com.ming.mingaicode.model.vo.LoginUserVO;
 import com.ming.mingaicode.model.vo.UserVO;
+import com.ming.mingaicode.ratelimiter.annotation.RateLimit;
+import com.ming.mingaicode.ratelimiter.enums.RateLimitType;
 import com.mybatisflex.core.paginate.Page;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
@@ -49,6 +51,13 @@ public class UserController {
      * @return 添加成功后返回的用户id
      */
     @PostMapping("/register")
+    @RateLimit(
+            key = "register",
+            limitType = RateLimitType.IP,
+            rate = 1,
+            rateInterval = 86400,
+            expireTime = 24,
+            message = "当天只能注册一个账号")
     public BaseResponse<Long> register(@RequestBody UserRegisterRequest user) {
         ThrowUtils.throwIf(user == null, new BusinessException(ErrorCode.PARAMS_ERROR));
         long result = userService.userRegister(user.getUserAccount(), user.getUserPassword(), user.getCheckPassword());
@@ -62,6 +71,13 @@ public class UserController {
      * @return
      */
     @PostMapping("/login")
+    @RateLimit(
+            key = "login",
+            limitType = RateLimitType.IP,
+            rate = 5,
+            rateInterval = 86400,
+            expireTime = 24,
+            message = "错误次数过多，请明天再试")
     public BaseResponse<LoginUserVO> userLogin(@RequestBody UserLoginRequest userLoginRequest, HttpServletRequest request) {
         ThrowUtils.throwIf(userLoginRequest == null, ErrorCode.PARAMS_ERROR);
         String userAccount = userLoginRequest.getUserAccount();
@@ -108,7 +124,7 @@ public class UserController {
         final String DEFAULT_PASSWORD = "12345678";
         String encryptPassword = DigestUtils.md5DigestAsHex(DEFAULT_PASSWORD.getBytes());
         user.setUserPassword(encryptPassword);
-        if (user.getUserRole() == null){
+        if (user.getUserRole() == null) {
             user.setUserRole(UserConstant.DEFAULT_ROLE);
         }
         boolean result = userService.save(user);
