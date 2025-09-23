@@ -74,7 +74,7 @@ public class UserController {
     @RateLimit(
             key = "login",
             limitType = RateLimitType.IP,
-            rate = 5,
+            rate = 3,
             rateInterval = 86400,
             expireTime = 24,
             message = "错误次数过多，请明天再试")
