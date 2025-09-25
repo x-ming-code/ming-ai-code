@@ -31,6 +31,7 @@ import com.ming.mingaicode.mapper.AppMapper;
 import com.ming.mingaicode.service.AppService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
@@ -49,6 +50,8 @@ import java.util.stream.Collectors;
 @Slf4j
 public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppService {
 
+    @Value("${code.deploy-host:http://localhost}")
+    private String deployHost;
     @Resource
     private UserService userService;
 
@@ -204,7 +207,7 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         ThrowUtils.throwIf(!res, ErrorCode.OPERATION_ERROR, "更新应用部署信息失败");
 
         //10. 部署成功后使用截图服务进行截图和插入数据库
-        String appDeployUrl = String.format("%s/%s", AppConstant.CODE_DEPLOY_HOST, deployKey);
+        String appDeployUrl = String.format("%s/%s", deployHost, deployKey);
         //异步生成截图并插入数据库
         generateAppScreenshotAsync(appId, appDeployUrl);
         return appDeployUrl;
