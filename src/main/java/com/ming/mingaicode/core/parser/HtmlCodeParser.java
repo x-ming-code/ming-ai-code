@@ -12,18 +12,18 @@ import java.util.regex.Pattern;
  */
 public class HtmlCodeParser implements CodeParser<HtmlCodeResult> {
 
-    private static final Pattern HTML_CODE_PATTERN = Pattern.compile("```html\\s*\\n([\\s\\S]*?)```", Pattern.CASE_INSENSITIVE);
-
+    private static final Pattern HTML_CODE_PATTERN =
+            Pattern.compile("```(?:html|HTML)?\\s*\\r?\\n([\\s\\S]*?)\\s*```", Pattern.CASE_INSENSITIVE);
     @Override
     public HtmlCodeResult parseCode(String codeContent) {
         HtmlCodeResult result = new HtmlCodeResult();
-        // 提取 HTML 代码
         String htmlCode = extractHtmlCode(codeContent);
+
         if (htmlCode != null && !htmlCode.trim().isEmpty()) {
             result.setHtmlCode(htmlCode.trim());
         } else {
-            // 如果没有找到代码块，将整个内容作为HTML
-            result.setHtmlCode(codeContent.trim());
+            // 找不到代码块：返回空（或抛异常，根据业务决定）
+            result.setHtmlCode(""); // 或者 throw new IllegalArgumentException("No HTML code block found");
         }
         return result;
     }

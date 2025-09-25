@@ -41,3 +41,7 @@ pexels:
 dashscope:
   api-key: <Your API Key>
   image-model: <Your Model>
+
+# 部署路径
+code:
+  deploy-host: http://localhost
